@@ -10,9 +10,9 @@ import (
 	www "github.com/hyphengolang/prelude/http"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 
-	"sql.adoublef.com/internal"
-	"sql.adoublef.com/internal/auth"
-	"sql.adoublef.com/internal/suid"
+	"secure.adoublef.com/internal"
+	"secure.adoublef.com/internal/auth"
+	"secure.adoublef.com/internal/suid"
 )
 
 /*

@@ -1,4 +1,4 @@
-module sql.adoublef.com
+module secure.adoublef.com
 
 go 1.19
 
@@ -12,7 +12,19 @@ require (
 )
 
 require (
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
+	github.com/goccy/go-json v0.9.11 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc v1.0.4 // indirect
+	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/lestrrat-go/option v1.0.0 // indirect
+)
+
+require (
+	github.com/go-chi/chi/v5 v5.0.7
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/lestrrat-go/jwx/v2 v2.0.6
 	golang.org/x/text v0.3.7 // indirect
 )

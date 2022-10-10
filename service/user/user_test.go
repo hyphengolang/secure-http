@@ -11,9 +11,10 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/hyphengolang/prelude/testing/is"
 	"github.com/jackc/pgx/v5"
-	"go.quick.adoublef/is"
-	"sql.adoublef.com/store/user"
+
+	"secure.adoublef.com/store/user"
 )
 
 const (

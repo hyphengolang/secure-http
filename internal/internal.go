@@ -6,7 +6,7 @@ import (
 
 	gpv "github.com/wagslane/go-password-validator"
 	"golang.org/x/crypto/bcrypt"
-	"sql.adoublef.com/internal/suid"
+	"secure.adoublef.com/internal/suid"
 )
 
 type ContextKey string

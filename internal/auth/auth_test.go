@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"go.quick.adoublef/is"
-	"sql.adoublef.com/internal"
-	"sql.adoublef.com/internal/suid"
+	"github.com/hyphengolang/prelude/testing/is"
+	"secure.adoublef.com/internal"
+	"secure.adoublef.com/internal/suid"
 )
 
 func TestToken(t *testing.T) {

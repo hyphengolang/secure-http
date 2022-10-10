@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"sql.adoublef.com/service"
-	"sql.adoublef.com/store"
+	"secure.adoublef.com/service"
+	"secure.adoublef.com/store"
 )
 
 func dev() error {

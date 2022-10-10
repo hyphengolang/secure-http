@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"sql.adoublef.com/internal"
-	"sql.adoublef.com/internal/suid"
+	"secure.adoublef.com/internal"
+	"secure.adoublef.com/internal/suid"
 )
 
 type User struct {

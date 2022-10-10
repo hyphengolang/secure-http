@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"sql.adoublef.com/service/user"
-	"sql.adoublef.com/store"
+	"secure.adoublef.com/service/user"
+	"secure.adoublef.com/store"
 )
 
 func (s Service) routes() {

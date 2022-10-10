@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	"sql.adoublef.com/internal"
-	"sql.adoublef.com/store/user"
+	"secure.adoublef.com/internal"
+	"secure.adoublef.com/store/user"
 )
 
 type Store struct {
