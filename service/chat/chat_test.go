@@ -37,15 +37,15 @@ func TestService(t *testing.T) {
 
 		conn, _, _, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/")
 		is.NoErr(err) // failed to upgrade
-		defer conn.Close()
+		t.Cleanup(func() { conn.Close() })
 
-		err = wsutil.WriteClientMessage(conn, ws.OpText, []byte(payload))
+		err = wsutil.WriteClientText(conn, []byte(payload))
 		is.NoErr(err) // write to server
-		// time.Sleep(5 * time.Second)
 
 		b, _, err := wsutil.ReadServerData(conn)
 		is.NoErr(err) // reading echo
 
 		is.Equal(string(b), payload)
+		is.True(string(b) != `World`)
 	})
 }
