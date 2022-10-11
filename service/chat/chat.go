@@ -6,21 +6,27 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
+	"github.com/gorilla/websocket"
 	www "github.com/hyphengolang/prelude/http"
 )
 
 func (s Service) routes() {
+	u := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
 	s.m.Route("/api/v1/chat", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			conn, _, _, err := ws.UpgradeHTTP(r, w)
+			conn, err := u.Upgrade(w, r, nil)
 			if err != nil {
 				s.respond(w, r, err, http.StatusUpgradeRequired)
 				return
 			}
-			msg, op, _ := wsutil.ReadClientData(conn)
-			_ = wsutil.WriteServerMessage(conn, op, msg)
+
+			var s string
+			_ = conn.ReadJSON(&s)
+			_ = conn.WriteJSON("Hello " + s + "!")
 		})
 	})
 }

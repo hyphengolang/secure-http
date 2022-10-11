@@ -8,10 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/hyphengolang/prelude/testing/is"
-
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 )
 
 const (
@@ -21,8 +19,11 @@ const (
 var h http.Handler
 
 func init() {
+
 	h = NewService(context.Background(), chi.NewMux())
 }
+
+// https://quii.gitbook.io/learn-go-with-tests/build-an-application/websockets
 
 func TestService(t *testing.T) {
 	t.Parallel()
@@ -33,19 +34,20 @@ func TestService(t *testing.T) {
 	t.Cleanup(func() { srv.Close() })
 
 	t.Run("echo from server", func(t *testing.T) {
-		payload := `Hello`
+		payload := `World`
 
-		conn, _, _, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/")
+		conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/", nil)
 		is.NoErr(err) // failed to upgrade
+
 		t.Cleanup(func() { conn.Close() })
 
-		err = wsutil.WriteClientText(conn, []byte(payload))
+		err = conn.WriteJSON(payload)
 		is.NoErr(err) // write to server
 
-		b, _, err := wsutil.ReadServerData(conn)
+		var s string
+		err = conn.ReadJSON(&s)
 		is.NoErr(err) // reading echo
 
-		is.Equal(string(b), payload)
-		is.True(string(b) != `World`)
+		is.Equal(s, `Hello World!`)
 	})
 }
