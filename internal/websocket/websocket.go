@@ -37,8 +37,9 @@ func (c serverConn) Read() ([]byte, error) {
 }
 
 func (c serverConn) ReadString() (string, error) {
-	b, err := wsutil.ReadClientText(c.rwc)
-	return string(b), err
+	// b, err := wsutil.ReadClientText(c.rwc)
+	// return string(b), err
+	return c.readString()
 }
 
 func (c serverConn) ReadJSON(v any) error {
@@ -51,8 +52,28 @@ func (c serverConn) ReadJSON(v any) error {
 	if h.OpCode == ws.OpClose {
 		return io.EOF
 	}
-
 	return json.NewDecoder(c.r).Decode(v)
+}
+
+func (c serverConn) readString() (string, error) {
+	h, err := c.r.NextFrame()
+	if err != nil {
+		return "", err
+	}
+
+	// Reset writer to write frame with right operation code.
+	c.w.Reset(c.rwc, ws.StateServerSide, h.OpCode)
+
+	b, err := io.ReadAll(c.r)
+	return string(b), err
+}
+
+func (c serverConn) writeString(s string) error {
+	_, err := io.WriteString(c.w, s)
+	if err != nil {
+		return err
+	}
+	return c.w.Flush()
 }
 
 func (c serverConn) WriteJSON(v any) error {
@@ -62,7 +83,10 @@ func (c serverConn) WriteJSON(v any) error {
 	return c.w.Flush()
 }
 
-func (c serverConn) WriteString(s string) error { return wsutil.WriteServerText(c.rwc, []byte(s)) }
+func (c serverConn) WriteString(s string) error {
+	// return wsutil.WriteServerText(c.rwc, []byte(s))
+	return c.writeString(s)
+}
 
 func (c serverConn) Write(p []byte) error { return wsutil.WriteServerBinary(c.rwc, p) }
 
