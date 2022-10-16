@@ -163,17 +163,15 @@ const (
 )
 
 var RepoTest = func() internal.UserRepo {
-	c, err := pgx.Connect(context.Background(), `postgres://postgres:postgrespw@localhost:49153/testing`)
+	ctx := context.Background()
+	c, err := pgx.Connect(ctx, `postgres://postgres:postgrespw@localhost:49153/testing`)
 	if err != nil {
 		panic(err)
 	}
 
-	if _, err = c.Exec(context.Background(), migration); err != nil {
-		panic(err)
-	}
-
 	Migration(c)
-	return NewRepo(context.Background(), c)
+
+	return NewRepo(ctx, c)
 }()
 
 // For development only
