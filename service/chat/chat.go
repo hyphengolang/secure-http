@@ -6,7 +6,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/websocket"
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 	www "github.com/hyphengolang/prelude/http"
 )
 
@@ -14,25 +15,26 @@ import (
 https://github.dev/gorilla/websocket/blob/master/examples/echo/server.go
 */
 func (s Service) routes() {
-	u := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-
 	s.m.Route("/api/v1/chat", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			rwc, err := u.Upgrade(w, r, nil)
-			if err != nil {
-				s.respond(w, r, err, http.StatusUpgradeRequired)
-				return
-			}
-
-			for {
-				msg, b, _ := rwc.ReadMessage()
-				_ = rwc.WriteMessage(msg, b)
-			}
-		})
+		r.Get("/", s.handleChat())
 	})
+}
+
+func (s Service) handleChat() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rwc, _, _, err := ws.UpgradeHTTP(r, w)
+		if err != nil {
+			s.respond(w, r, err, http.StatusUpgradeRequired)
+			return
+		}
+
+		defer rwc.Close()
+
+		for {
+			msg, _ := wsutil.ReadClientText(rwc)
+			_ = wsutil.WriteServerText(rwc, msg)
+		}
+	}
 }
 
 /* WEBSOCKET */
@@ -67,6 +69,6 @@ func NewService(ctx context.Context, m chi.Router) http.Handler {
 
 func (s Service) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.m.ServeHTTP(w, r) }
 
-func (s Service) respondText(w http.ResponseWriter, r *http.Request, status int) {
+func (s Service) respondStatus(w http.ResponseWriter, r *http.Request, status int) {
 	s.respond(w, r, http.StatusText(status), status)
 }
