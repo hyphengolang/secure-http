@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hyphengolang/prelude/testing/is"
-	"secure.adoublef.com/internal/websocket"
+	"github.com/hyphengolang/prelude/websocket"
 )
 
 const (

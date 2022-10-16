@@ -5,12 +5,12 @@ import (
 	"errors"
 	"time"
 
+	psql "github.com/hyphengolang/prelude/sql/postgres"
 	"github.com/hyphengolang/prelude/types/email"
 	"github.com/hyphengolang/prelude/types/password"
 	"github.com/hyphengolang/prelude/types/suid"
 	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
-	"secure.adoublef.com/internal/psql"
 )
 
 type User struct {
