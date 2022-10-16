@@ -12,8 +12,10 @@ import (
 type Conn interface {
 	Close() error
 
-	WriteString(p string) error
+	Read() ([]byte, error)
 	ReadString() (string, error)
+	Write(p []byte) error
+	WriteString(p string) error
 }
 
 type serverConn struct {
@@ -22,14 +24,19 @@ type serverConn struct {
 
 func (c serverConn) Close() error { return c.rwc.Close() }
 
+func (c serverConn) Read() ([]byte, error) {
+	b, err := wsutil.ReadClientBinary(c.rwc)
+	return b, err
+}
+
 func (c serverConn) ReadString() (string, error) {
 	b, err := wsutil.ReadClientText(c.rwc)
 	return string(b), err
 }
 
-func (c serverConn) WriteString(s string) error {
-	return wsutil.WriteServerText(c.rwc, []byte(s))
-}
+func (c serverConn) WriteString(s string) error { return wsutil.WriteServerText(c.rwc, []byte(s)) }
+
+func (c serverConn) Write(p []byte) error { return wsutil.WriteServerBinary(c.rwc, p) }
 
 type clientConn struct {
 	rwc net.Conn
@@ -37,9 +44,18 @@ type clientConn struct {
 
 func (c clientConn) Close() error { return c.rwc.Close() }
 
+func (c clientConn) Read() ([]byte, error) {
+	b, err := wsutil.ReadServerText(c.rwc)
+	return b, err
+}
+
 func (c clientConn) ReadString() (string, error) {
 	b, err := wsutil.ReadServerText(c.rwc)
 	return string(b), err
+}
+
+func (c clientConn) Write(p []byte) error {
+	return wsutil.WriteClientText(c.rwc, p)
 }
 
 func (c clientConn) WriteString(s string) error {
