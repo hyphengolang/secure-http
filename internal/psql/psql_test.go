@@ -2,49 +2,50 @@ package psql
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
+	"github.com/hyphengolang/prelude/testing/is"
 	"github.com/jackc/pgx/v5"
-	"gotest.tools/v3/assert"
-	"gotest.tools/v3/assert/cmp"
 )
-
-type testcase struct {
-	Id   int
-	Name string
-	Age  int
-}
 
 var psql = os.ExpandEnv("host=${POSTGRES_HOSTNAME} port=${DB_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=disable")
 
-func TestQueryRow(t *testing.T) {
+func TestGenericQueries(t *testing.T) {
+	t.Parallel()
+
+	type testcase struct {
+		Id   int
+		Name string
+		Age  int
+	}
+
 	db, _ := pgx.Connect(context.Background(), psql)
+	is := is.New(t)
 
-	var b testcase
-	err := QueryRow(db, "SELECT * FROM testcase WHERE id = $1", func(row pgx.Row) error { return row.Scan(&b.Id, &b.Name, &b.Age) }, 1)
-	assert.Assert(t, err)
+	t.Cleanup(func() { db.Close(context.Background()) })
 
-	assert.Assert(t, cmp.Equal(b.Name, "John"))
-}
+	t.Run(`select entry from database`, func(t *testing.T) {
+		var b testcase
+		err := QueryRow(db, "SELECT * FROM testcase WHERE id = $1", func(row pgx.Row) error { return row.Scan(&b.Id, &b.Name, &b.Age) }, 1)
+		is.NoErr(err) // can make query
 
-func TestQuery(t *testing.T) {
-	db, _ := pgx.Connect(context.Background(), psql)
+		is.Equal(b.Name, "John") // user.Name == "John"
+	})
 
-	items, err := Query(db, "SELECT * FROM testcase WHERE age > $1", func(rows pgx.Rows, i *testcase) error {
-		return rows.Scan(&i.Id, &i.Name, &i.Age)
-	}, 24)
+	t.Run(`select all from database`, func(t *testing.T) {
+		items, err := Query(db, "SELECT * FROM testcase WHERE age > $1", func(rows pgx.Rows, i *testcase) error {
+			return rows.Scan(&i.Id, &i.Name, &i.Age)
+		}, 24)
 
-	assert.Assert(t, err)
+		is.NoErr(err) // can make query
 
-	assert.Assert(t, cmp.Equal(len(items), 2))
-	fmt.Printf("item: %v\n", items)
-}
+		is.Equal(len(items), 2) // two entries in the test database
+	})
 
-func TestExec(t *testing.T) {
-	db, _ := pgx.Connect(context.Background(), psql)
+	t.Run(`insert into database`, func(t *testing.T) {
+		err := Exec(db, "INSERT INTO testcase (name,age) VALUES ($1,$2)", "Maxi", 31)
+		is.NoErr(err) // no error making exec
+	})
 
-	err := Exec(db, "INSERT INTO testcase (name,age) VALUES ($1,$2)", "Maxi", 31)
-	assert.Assert(t, err)
 }
