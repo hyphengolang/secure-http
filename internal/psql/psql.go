@@ -13,21 +13,21 @@ type Q interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 }
 
-func Query[T any](db Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
-	return QueryContext(context.Background(), db, query, scanner, args...)
+func Query[T any](q Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
+	return QueryContext(context.Background(), q, query, scanner, args...)
 }
 
-func QueryRow(db Q, query string, scanner func(r pgx.Row) error, args ...any) error {
-	return QueryRowContext(context.Background(), db, query, scanner, args...)
+func QueryRow(q Q, query string, scanner func(r pgx.Row) error, args ...any) error {
+	return QueryRowContext(context.Background(), q, query, scanner, args...)
 }
 
-func Exec(db Q, query string, args ...any) error {
+func Exec(q Q, query string, args ...any) error {
 
-	return ExecContext(context.Background(), db, query, args...)
+	return ExecContext(context.Background(), q, query, args...)
 }
 
-func QueryContext[T any](ctx context.Context, db Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
-	rows, err := db.Query(ctx, query, args...)
+func QueryContext[T any](ctx context.Context, q Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
+	rows, err := q.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +44,11 @@ func QueryContext[T any](ctx context.Context, db Q, query string, scanner func(r
 	return vs, rows.Err()
 }
 
-func QueryRowContext(ctx context.Context, db Q, query string, scanner func(r pgx.Row) error, args ...any) error {
-	return scanner(db.QueryRow(ctx, query, args...))
+func QueryRowContext(ctx context.Context, q Q, query string, scanner func(r pgx.Row) error, args ...any) error {
+	return scanner(q.QueryRow(ctx, query, args...))
 }
 
-func ExecContext(ctx context.Context, db Q, query string, args ...any) error {
-	_, err := db.Exec(ctx, query, args...)
+func ExecContext(ctx context.Context, q Q, query string, args ...any) error {
+	_, err := q.Exec(ctx, query, args...)
 	return err
 }
