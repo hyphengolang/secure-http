@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/hyphengolang/prelude/http/websocket"
 	"github.com/hyphengolang/prelude/testing/is"
-	"github.com/hyphengolang/prelude/websocket"
 )
 
 const (

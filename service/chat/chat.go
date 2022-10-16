@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	www "github.com/hyphengolang/prelude/http"
-	"github.com/hyphengolang/prelude/websocket"
+	"github.com/hyphengolang/prelude/http/websocket"
 )
 
 /*
