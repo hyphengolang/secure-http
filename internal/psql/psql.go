@@ -7,6 +7,25 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+type C interface {
+	Close(ctx context.Context) error
+	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+	Q
+	P
+}
+
+type T interface {
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+	P
+	Q
+}
+
+type P interface {
+	Prepare(ctx context.Context, name string, sql string) (sd *pgconn.StatementDescription, err error)
+}
+
 type Q interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
