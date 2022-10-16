@@ -38,7 +38,7 @@ func TestService(t *testing.T) {
 
 	t.Cleanup(func() { conn.Close() })
 
-	t.Run("echo server", func(t *testing.T) {
+	t.Run("send a message", func(t *testing.T) {
 		input := `Hello Foo`
 
 		err = conn.WriteJSON(input)
@@ -49,5 +49,19 @@ func TestService(t *testing.T) {
 		is.NoErr(err) // reading echo
 
 		is.Equal(output, `Hello Foo`) // input == output
+	})
+
+	t.Run("send another message", func(t *testing.T) {
+		input := `Hello Bar`
+
+		err = conn.WriteJSON(input)
+		is.NoErr(err) // write to server
+
+		var output string
+		err := conn.ReadJSON(&output)
+		is.NoErr(err) // reading echo
+
+		is.True(output != "")   // not empty
+		is.Equal(output, input) // input == output
 	})
 }
