@@ -23,7 +23,7 @@ const (
 var h http.Handler
 
 func init() {
-	h = NewService(context.Background(), chi.NewMux(), user.RepoDev)
+	h = NewService(context.Background(), chi.NewMux(), user.RepoTest)
 }
 
 func TestService(t *testing.T) {
@@ -103,7 +103,7 @@ func TestService(t *testing.T) {
 		}`
 
 		res, _ := srv.Client().Post(srv.URL+"/api/v1/auth/", applicationJson, strings.NewReader(payload))
-		is.Equal(res.StatusCode, http.StatusNotFound) // invalid email
+		is.Equal(res.StatusCode, http.StatusForbidden) // invalid email
 
 		payload = `
 		{
@@ -112,7 +112,7 @@ func TestService(t *testing.T) {
 		}`
 
 		res, _ = srv.Client().Post(srv.URL+"/api/v1/auth/", applicationJson, strings.NewReader(payload))
-		is.Equal(res.StatusCode, http.StatusNotFound) // invalid password
+		is.Equal(res.StatusCode, http.StatusForbidden) // invalid password
 
 		payload = `
 		{

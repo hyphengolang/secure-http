@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hyphengolang/prelude/testing/is"
+	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
 	"secure.adoublef.com/internal/suid"
 )
@@ -12,7 +13,15 @@ import (
 var r internal.UserRepo
 
 func init() {
-	r = repoMigration(`postgres://postgres:postgrespw@localhost:49153/testing`)
+	connString := `postgres://postgres:postgrespw@localhost:49153/testing`
+	c, err := pgx.Connect(context.Background(), connString)
+	if err != nil {
+		panic(err)
+	}
+
+	Migration(c)
+
+	r = NewRepo(context.Background(), c)
 }
 
 func TestRepo(t *testing.T) {

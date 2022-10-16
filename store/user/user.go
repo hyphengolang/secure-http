@@ -162,8 +162,8 @@ const (
 	RuleSoftDeletion = contextKey("rule-soft-deletion")
 )
 
-func repoMigration(connString string) internal.UserRepo {
-	c, err := pgx.Connect(context.Background(), connString)
+var RepoTest = func() internal.UserRepo {
+	c, err := pgx.Connect(context.Background(), `postgres://postgres:postgrespw@localhost:49153/testing`)
 	if err != nil {
 		panic(err)
 	}
@@ -172,10 +172,18 @@ func repoMigration(connString string) internal.UserRepo {
 		panic(err)
 	}
 
+	Migration(c)
 	return NewRepo(context.Background(), c)
-}
+}()
 
-var RepoDev = repoMigration(`postgres://postgres:postgrespw@localhost:49153/testing`)
+// For development only
+//
+// If there is an error, it will panic immediately
+func Migration(c *pgx.Conn) {
+	if _, err := c.Exec(context.Background(), migration); err != nil {
+		panic(err)
+	}
+}
 
 const migration = `
 begin;
