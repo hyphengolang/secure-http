@@ -1,0 +1,14 @@
+{
+    "folders": [
+        {
+            "path": "service"
+        },
+        {
+            "path": "store"
+        },
+        {
+            "path": "web",
+            "name": "client"
+        }
+    ]
+}
