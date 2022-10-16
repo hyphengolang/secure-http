@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
+	"secure.adoublef.com/internal/psql"
 	"secure.adoublef.com/internal/suid"
 )
 
@@ -37,42 +38,24 @@ const (
 )
 
 func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
-	var row pgx.Row
-	switch key := key.(type) {
+	var qry string
+	switch key.(type) {
 	case suid.UUID:
-		row = r.q.QueryRow(ctx, qrySelectByID, key)
+		qry = qrySelectByID
 	case internal.Email:
-		row = r.q.QueryRow(ctx, qrySelectByEmail, key)
+		qry = qrySelectByEmail
 	case string:
-		row = r.q.QueryRow(ctx, qrySelectByUsername, key)
+		qry = qrySelectByUsername
 	default:
 		return nil, ErrInvalidType
 	}
 
 	var u internal.User
-	return &u, row.Scan(&u.ID, &u.Username, &u.Email, &u.Password)
+	return &u, psql.QueryRow(r.q, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
 }
 
 func (r Repo) SelectMany(ctx context.Context) ([]internal.User, error) {
-	rs, err := r.q.Query(ctx, qrySelectMany)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Close()
-
-	var us []internal.User
-	for rs.Next() {
-		var u User
-		_ = rs.Scan(&u.ID, &u.Username, &u.Email, &u.Password)
-		us = append(us, internal.User{
-			ID:       u.ID,
-			Email:    u.Email,
-			Password: u.Password,
-			Username: u.Username,
-		})
-	}
-
-	return us, rs.Err()
+	return psql.Query(r.q, qrySelectMany, func(r pgx.Rows, u *internal.User) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) })
 }
 
 func (r Repo) Insert(ctx context.Context, u *internal.User) error {
@@ -83,8 +66,7 @@ func (r Repo) Insert(ctx context.Context, u *internal.User) error {
 		"password": u.Password,
 	}
 
-	_, err := r.q.Exec(ctx, qryInsert, args)
-	return err
+	return psql.Exec(r.q, qryInsert, args)
 }
 
 func (r Repo) Delete(ctx context.Context, key any) error {
