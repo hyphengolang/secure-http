@@ -8,9 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"github.com/hyphengolang/prelude/testing/is"
+	"secure.adoublef.com/internal/websocket"
 )
 
 const (
@@ -34,20 +33,20 @@ func TestService(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(func() { srv.Close() })
 
-	conn, _, _, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/")
+	conn, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/")
 	is.NoErr(err) // failed to upgrade
 
 	t.Cleanup(func() { conn.Close() })
 
 	t.Run("echo server", func(t *testing.T) {
-		i := `Hello Foo`
+		input := `Hello Foo`
 
-		err = wsutil.WriteClientText(conn, []byte(i))
+		err = conn.WriteString(input)
 		is.NoErr(err) // write to server
 
-		b, err := wsutil.ReadServerText(conn)
+		output, err := conn.ReadString()
 		is.NoErr(err) // reading echo
 
-		is.Equal(string(b), i)
+		is.Equal(output, input) // input == output
 	})
 }

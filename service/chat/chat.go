@@ -6,9 +6,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	www "github.com/hyphengolang/prelude/http"
+	"secure.adoublef.com/internal/websocket"
 )
 
 /*
@@ -22,17 +21,17 @@ func (s Service) routes() {
 
 func (s Service) handleChat() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rwc, _, _, err := ws.UpgradeHTTP(r, w)
+		conn, err := websocket.UpgradeHTTP(w, r)
 		if err != nil {
 			s.respond(w, r, err, http.StatusUpgradeRequired)
 			return
 		}
 
-		defer rwc.Close()
+		defer conn.Close()
 
 		for {
-			msg, _ := wsutil.ReadClientText(rwc)
-			_ = wsutil.WriteServerText(rwc, msg)
+			msg, _ := conn.ReadString()
+			_ = conn.WriteString(msg)
 		}
 	}
 }
