@@ -30,8 +30,9 @@ func (s Service) handleChat() http.HandlerFunc {
 		defer conn.Close()
 
 		for {
-			msg, _ := conn.ReadString()
-			_ = conn.WriteString(msg)
+			var msg string
+			_ = conn.ReadJSON(&msg)
+			_ = conn.WriteJSON(&msg)
 		}
 	}
 }
