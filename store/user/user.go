@@ -148,10 +148,17 @@ func NewRepo(ctx context.Context, q *pgx.Conn) internal.UserRepo {
 
 var ErrInvalidType = errors.New(`invalid type`)
 
+// More info regarding soft deleting https://evilmartians.com/chronicles/soft-deletion-with-postgresql-but-with-logic-on-the-database
 type DeleteTyp int
 
+func (t DeleteTyp) String() string {
+	return [...]string{
+		"soft_delete",
+		"hard_delete",
+	}[t]
+}
+
 const (
-	// More info regarding soft deleting https://evilmartians.com/chronicles/soft-deletion-with-postgresql-but-with-logic-on-the-database
 	SoftDelete DeleteTyp = iota
 	HardDelete
 )
