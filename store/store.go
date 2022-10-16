@@ -20,7 +20,7 @@ func New(ctx context.Context, c *pgx.Conn) *Store {
 	}
 }
 
-func Dev(ctx context.Context, connString string) *Store {
+func StoreTest(ctx context.Context, connString string) *Store {
 	c, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
 		panic(err)
