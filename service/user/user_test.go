@@ -23,7 +23,7 @@ const (
 var h http.Handler
 
 func init() {
-	h = NewService(context.Background(), chi.NewMux(), user.RepoTest())
+	h = NewService(context.Background(), chi.NewMux(), user.RepoDev)
 }
 
 func TestService(t *testing.T) {

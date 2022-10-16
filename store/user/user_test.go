@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/hyphengolang/prelude/testing/is"
-	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
 	"secure.adoublef.com/internal/suid"
 )
@@ -13,42 +12,7 @@ import (
 var r internal.UserRepo
 
 func init() {
-	connString := `postgres://postgres:postgrespw@localhost:49153/testing`
-
-	c, err := pgx.Connect(context.Background(), connString)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = c.Exec(context.Background(), `
-	begin;
-
-		create extension if not exists "uuid-ossp";
-		create extension if not exists "citext";
-
-		create temp table if not exists "account" (
-			id uuid primary key default uuid_generate_v4(),
-			username text unique not null check (username <> ''),
-			email citext unique not null check (email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'),
-			password citext not null check (password <> ''),
-			created_at timestamp not null default now(),
-			deleted boolean not null default false
-		);
-		
-		create or replace rule "_soft_deletion" 
-			as on delete to "account" 
-			where current_setting('rules.soft_deletion') = 'on'
-			do instead update "account" set deleted = true where id = old.id;
-
-		set rules.soft_deletion to 'on';
-		
-	commit;
-	`)
-	if err != nil {
-		panic(err)
-	}
-
-	r = NewRepo(context.Background(), c)
+	r = repoMigration(`postgres://postgres:postgrespw@localhost:49153/testing`)
 }
 
 func TestRepo(t *testing.T) {
