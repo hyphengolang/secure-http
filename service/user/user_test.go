@@ -43,8 +43,7 @@ func TestService(t *testing.T) {
 			"email":"fizz@mail.com",
 			"password":"p4$$w4rD"
 		}`
-		// v:=url.Values{}
-		// v.Encode()
+
 		res, _ := srv.Client().Post(srv.URL+"/api/v1/account/", applicationJson, strings.NewReader(payload))
 		is.Equal(res.StatusCode, http.StatusCreated) // register "i_am_fizz"
 		fizzUrl, _ = res.Location()
