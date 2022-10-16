@@ -113,7 +113,6 @@ func (c clientConn) ReadString() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	// Reset writer to write frame with right operation code.
 	c.w.Reset(c.rwc, c.State(), h.OpCode)
 
@@ -137,7 +136,6 @@ func (c clientConn) Write(p []byte) error {
 }
 
 func (c clientConn) WriteString(s string) error {
-	// return wsutil.WriteMessage(c.rwc, c.State(), ws.OpText, []byte(s))
 	_, err := io.WriteString(c.w, s)
 	if err != nil {
 		return err
