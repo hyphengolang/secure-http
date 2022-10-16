@@ -1,16 +1,17 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 
-	"secure.adoublef.com/service"
-	"secure.adoublef.com/store"
+	"github.com/go-chi/chi/v5"
+	"secure.adoublef.com/file"
 )
 
 func dev() error {
-	handler := service.New(context.Background(), store.StoreTest)
+	// handler := service.New(context.Background(), store.StoreTest)
+
+	handler := file.New(chi.NewMux())
 
 	srv := http.Server{
 		Addr:    ":7878",
