@@ -325,13 +325,13 @@ type User struct {
 type Service struct {
 	ctx context.Context
 
+	r internal.UserRepo
+
 	m         chi.Router
 	respond   func(w http.ResponseWriter, r *http.Request, data any, status int)
 	decode    func(rw http.ResponseWriter, r *http.Request, data any) (err error)
 	created   func(w http.ResponseWriter, r *http.Request, id string)
 	setCookie func(w http.ResponseWriter, cookie *http.Cookie)
-
-	r internal.UserRepo
 
 	log  func(v ...any)
 	logf func(format string, v ...any)
@@ -352,12 +352,12 @@ func (s Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func NewService(ctx context.Context, m chi.Router, r internal.UserRepo) http.Handler {
 	s := &Service{
 		ctx:       ctx,
+		r:         r,
 		m:         m,
 		respond:   www.Respond,
 		decode:    www.Decode,
 		created:   www.Created,
 		setCookie: http.SetCookie,
-		r:         r,
 		log:       log.Println,
 		logf:      log.Printf,
 	}
