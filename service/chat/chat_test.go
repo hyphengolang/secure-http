@@ -41,11 +41,11 @@ func TestService(t *testing.T) {
 	t.Run("send a message", func(t *testing.T) {
 		input := `Hello Foo`
 
-		err = conn.WriteJSON(input)
+		err = conn.WriteString(input)
 		is.NoErr(err) // write to server
 
 		var output string
-		err := conn.ReadJSON(&output)
+		output, err = conn.ReadString()
 		is.NoErr(err) // reading echo
 
 		is.Equal(output, `Hello Foo`) // input == output
