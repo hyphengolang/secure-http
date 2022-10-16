@@ -37,8 +37,6 @@ func (c serverConn) Read() ([]byte, error) {
 }
 
 func (c serverConn) ReadString() (string, error) {
-	// b, err := wsutil.ReadClientText(c.rwc)
-	// return string(b), err
 	return c.readString()
 }
 
@@ -84,7 +82,6 @@ func (c serverConn) WriteJSON(v any) error {
 }
 
 func (c serverConn) WriteString(s string) error {
-	// return wsutil.WriteServerText(c.rwc, []byte(s))
 	return c.writeString(s)
 }
 
