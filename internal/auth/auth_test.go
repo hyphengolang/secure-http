@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/hyphengolang/prelude/testing/is"
+	"github.com/hyphengolang/prelude/types/password"
+	"github.com/hyphengolang/prelude/types/suid"
+
 	"secure.adoublef.com/internal"
-	"secure.adoublef.com/internal/suid"
 )
 
 func TestToken(t *testing.T) {
@@ -22,7 +24,7 @@ func TestToken(t *testing.T) {
 			ID:       suid.NewUUID(),
 			Username: "fizz_user",
 			Email:    "fizz@mail.com",
-			Password: internal.Password("492045rf-vf").MustHash(),
+			Password: password.Password("492045rf-vf").MustHash(),
 		}
 
 		o := SignOption{

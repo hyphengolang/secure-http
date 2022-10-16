@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/hyphengolang/prelude/testing/is"
+	"github.com/hyphengolang/prelude/types/email"
+	"github.com/hyphengolang/prelude/types/password"
+	"github.com/hyphengolang/prelude/types/suid"
 	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
-	"secure.adoublef.com/internal/suid"
 )
 
 var r internal.UserRepo
@@ -46,14 +48,14 @@ func TestRepo(t *testing.T) {
 	})
 
 	fizzId := suid.NewUUID()
-	buzzEmail := internal.Email("buzz@mail.com")
+	buzzEmail := email.Email("buzz@mail.com")
 	burpUsername := "i_am_burp"
 	t.Run(`insert one into "account"`, func(t *testing.T) {
 		fizz := internal.User{
 			ID:       fizzId,
 			Username: "i_am_fizz",
 			Email:    "fizz@mail.com",
-			Password: internal.Password("p4$$w4rD").MustHash(),
+			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
 		err := r.Insert(ctx, &fizz)
@@ -63,7 +65,7 @@ func TestRepo(t *testing.T) {
 			ID:       suid.NewUUID(),
 			Username: "i_am_buzz",
 			Email:    buzzEmail,
-			Password: internal.Password("p4$$w4rD").MustHash(),
+			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
 		err = r.Insert(ctx, &buzz)
@@ -73,7 +75,7 @@ func TestRepo(t *testing.T) {
 			ID:       suid.NewUUID(),
 			Username: burpUsername,
 			Email:    "burp@mail.com",
-			Password: internal.Password("p4$$w4rD").MustHash(),
+			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
 		err = r.Insert(ctx, &burp)
@@ -89,7 +91,7 @@ func TestRepo(t *testing.T) {
 			ID:       suid.NewUUID(),
 			Username: "i_am_fizz",
 			Email:    "fizz@mail.com",
-			Password: internal.Password("p4$$w4rD").MustHash(),
+			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
 		err := r.Insert(context.Background(), &u)
@@ -99,7 +101,7 @@ func TestRepo(t *testing.T) {
 			ID:       suid.NewUUID(),
 			Username: "i_am_bazz",
 			Email:    "bazzmail.com",
-			Password: internal.Password("p4$$w4rD").MustHash(),
+			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
 		err = r.Insert(context.Background(), &u)

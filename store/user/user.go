@@ -5,17 +5,19 @@ import (
 	"errors"
 	"time"
 
+	"github.com/hyphengolang/prelude/types/email"
+	"github.com/hyphengolang/prelude/types/password"
+	"github.com/hyphengolang/prelude/types/suid"
 	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
 	"secure.adoublef.com/internal/psql"
-	"secure.adoublef.com/internal/suid"
 )
 
 type User struct {
 	ID        suid.UUID
 	Username  string
-	Email     internal.Email
-	Password  internal.PasswordHash
+	Email     email.Email
+	Password  password.PasswordHash
 	CreatedAt time.Time
 	IsDeleted bool
 	DeletedAt *time.Time
@@ -42,7 +44,7 @@ func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
 	switch key.(type) {
 	case suid.UUID:
 		qry = qrySelectByID
-	case internal.Email:
+	case email.Email:
 		qry = qrySelectByEmail
 	case string:
 		qry = qrySelectByUsername
@@ -94,7 +96,7 @@ func (r Repo) Delete(ctx context.Context, key any) error {
 	switch key.(type) {
 	case suid.UUID:
 		qry = qryDeleteByID
-	case internal.Email:
+	case email.Email:
 		qry = qryDeleteByEmail
 	default:
 		return ErrInvalidType

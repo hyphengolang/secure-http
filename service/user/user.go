@@ -8,11 +8,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	www "github.com/hyphengolang/prelude/http"
+	"github.com/hyphengolang/prelude/types/email"
+	"github.com/hyphengolang/prelude/types/password"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 
+	"github.com/hyphengolang/prelude/types/suid"
 	"secure.adoublef.com/internal"
 	"secure.adoublef.com/internal/auth"
-	"secure.adoublef.com/internal/suid"
 )
 
 /*
@@ -97,13 +99,13 @@ func (s Service) handleRefreshToken(private, public jwk.Key) http.HandlerFunc {
 			return
 		}
 
-		email, ok := jtk.PrivateClaims()["email"].(string)
+		e, ok := jtk.PrivateClaims()["email"].(string)
 		if !ok {
 			s.respondText(w, r, http.StatusInternalServerError)
 			return
 		}
 		// auth middleware
-		u, err := s.r.Select(r.Context(), internal.Email(email))
+		u, err := s.r.Select(r.Context(), email.Email(e))
 		if err != nil {
 			s.respond(w, r, err, http.StatusForbidden)
 			return
@@ -201,14 +203,14 @@ func (s Service) handleGetMyAccount(public jwk.Key) http.HandlerFunc {
 			return
 		}
 
-		email, ok := tk.PrivateClaims()["email"].(string)
+		e, ok := tk.PrivateClaims()["email"].(string)
 		if !ok {
 			s.respondText(w, r, http.StatusInternalServerError)
 			return
 		}
 		// auth middleware
 
-		me, err := s.r.Select(r.Context(), internal.Email(email))
+		me, err := s.r.Select(r.Context(), email.Email(e))
 		if err != nil {
 			s.respond(w, r, err, http.StatusNotFound)
 			return
@@ -318,8 +320,8 @@ func (s Service) newUser(w http.ResponseWriter, r *http.Request, u *internal.Use
 type User struct {
 	ID       suid.UUID         `json:"id"`
 	Username string            `json:"username"`
-	Email    internal.Email    `json:"email"`
-	Password internal.Password `json:"password"`
+	Email    email.Email       `json:"email"`
+	Password password.Password `json:"password"`
 }
 
 type Service struct {
