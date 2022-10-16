@@ -10,6 +10,9 @@ import (
 	www "github.com/hyphengolang/prelude/http"
 )
 
+/*
+https://github.dev/gorilla/websocket/blob/master/examples/echo/server.go
+*/
 func (s Service) routes() {
 	u := websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -18,18 +21,21 @@ func (s Service) routes() {
 
 	s.m.Route("/api/v1/chat", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			conn, err := u.Upgrade(w, r, nil)
+			rwc, err := u.Upgrade(w, r, nil)
 			if err != nil {
 				s.respond(w, r, err, http.StatusUpgradeRequired)
 				return
 			}
 
-			var s string
-			_ = conn.ReadJSON(&s)
-			_ = conn.WriteJSON("Hello " + s + "!")
+			for {
+				msg, b, _ := rwc.ReadMessage()
+				_ = rwc.WriteMessage(msg, b)
+			}
 		})
 	})
 }
+
+/* WEBSOCKET */
 
 type Service struct {
 	m chi.Router

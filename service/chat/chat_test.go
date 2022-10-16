@@ -33,21 +33,30 @@ func TestService(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(func() { srv.Close() })
 
-	t.Run("echo from server", func(t *testing.T) {
-		payload := `World`
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/", nil)
+	is.NoErr(err) // failed to upgrade
 
-		conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/api/v1/chat/", nil)
-		is.NoErr(err) // failed to upgrade
+	t.Cleanup(func() { conn.Close() })
 
-		t.Cleanup(func() { conn.Close() })
-
-		err = conn.WriteJSON(payload)
+	t.Run("echo server", func(t *testing.T) {
+		i := `Hello Foo`
+		err = conn.WriteMessage(websocket.TextMessage, []byte(i))
 		is.NoErr(err) // write to server
 
-		var s string
-		err = conn.ReadJSON(&s)
+		_, b, err := conn.ReadMessage()
 		is.NoErr(err) // reading echo
 
-		is.Equal(s, `Hello World!`)
+		is.Equal(string(b), i)
+	})
+
+	t.Run("echo server", func(t *testing.T) {
+		i := `Hello Bar`
+		err = conn.WriteMessage(websocket.TextMessage, []byte(i))
+		is.NoErr(err) // write to server
+
+		_, b, err := conn.ReadMessage()
+		is.NoErr(err) // reading echo
+
+		is.Equal(string(b), i)
 	})
 }
