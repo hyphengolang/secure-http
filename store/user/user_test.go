@@ -115,7 +115,7 @@ func TestRepo(t *testing.T) {
 		is.NoErr(err) // perform soft delete on "i_am_fizz"
 
 		us, _ := r.SelectMany(ctx)
-		is.Equal(len(us), 3) // 3 users in database
+		is.Equal(len(us), 3) // 3 users in database after soft delete
 
 		ctx = context.WithValue(ctx, RuleSoftDeletion, HardDelete)
 		err = r.Delete(ctx, buzzEmail)

@@ -49,7 +49,6 @@ func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
 	default:
 		return nil, ErrInvalidType
 	}
-
 	var u internal.User
 	return &u, psql.QueryRow(r.q, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
 }
@@ -75,34 +74,34 @@ func (r Repo) Delete(ctx context.Context, key any) error {
 		return err
 	}
 
+	var rule string
 	if typ, set := ctx.Value(RuleSoftDeletion).(DeleteTyp); !set {
-		if _, err = tx.Exec(ctx, setRuleSoftDeletionOn); err != nil {
-			return err
-		}
+		rule = setRuleSoftDeletionOn
 	} else {
 		switch typ {
 		case HardDelete:
-			if _, err = tx.Exec(ctx, setRuleSoftDeletionOff); err != nil {
-				return err
-			}
+			rule = setRuleSoftDeletionOff
 		default:
-			if _, err = tx.Exec(ctx, setRuleSoftDeletionOn); err != nil {
-				return err
-			}
+			rule = setRuleSoftDeletionOn
 		}
 	}
 
-	switch key := key.(type) {
+	if err = psql.Exec(tx, rule); err != nil {
+		return err
+	}
+
+	var qry string
+	switch key.(type) {
 	case suid.UUID:
-		if _, err = tx.Exec(ctx, qryDeleteByID, key); err != nil {
-			return err
-		}
+		qry = qryDeleteByID
 	case internal.Email:
-		if _, err = tx.Exec(ctx, qryDeleteByEmail, key); err != nil {
-			return err
-		}
+		qry = qryDeleteByEmail
 	default:
 		return ErrInvalidType
+	}
+
+	if err = psql.Exec(tx, qry, key); err != nil {
+		return err
 	}
 
 	return tx.Commit(ctx)

@@ -4,22 +4,29 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func Query[T any](db *pgx.Conn, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
+type Q interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+func Query[T any](db Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
 	return QueryContext(context.Background(), db, query, scanner, args...)
 }
 
-func QueryRow[Q *pgx.Conn](db Q, query string, scanner func(r pgx.Row) error, args ...any) error {
+func QueryRow(db Q, query string, scanner func(r pgx.Row) error, args ...any) error {
 	return QueryRowContext(context.Background(), db, query, scanner, args...)
 }
 
-func Exec(db *pgx.Conn, query string, args ...any) error {
+func Exec(db Q, query string, args ...any) error {
 
 	return ExecContext(context.Background(), db, query, args...)
 }
 
-func QueryContext[T any](ctx context.Context, db *pgx.Conn, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
+func QueryContext[T any](ctx context.Context, db Q, query string, scanner func(r pgx.Rows, v *T) error, args ...any) ([]T, error) {
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -37,11 +44,11 @@ func QueryContext[T any](ctx context.Context, db *pgx.Conn, query string, scanne
 	return vs, rows.Err()
 }
 
-func QueryRowContext(ctx context.Context, db *pgx.Conn, query string, scanner func(r pgx.Row) error, args ...any) error {
+func QueryRowContext(ctx context.Context, db Q, query string, scanner func(r pgx.Row) error, args ...any) error {
 	return scanner(db.QueryRow(ctx, query, args...))
 }
 
-func ExecContext(ctx context.Context, db *pgx.Conn, query string, args ...any) error {
+func ExecContext(ctx context.Context, db Q, query string, args ...any) error {
 	_, err := db.Exec(ctx, query, args...)
 	return err
 }
