@@ -20,14 +20,13 @@ func New(ctx context.Context, c *pgx.Conn) *Store {
 	}
 }
 
-func StoreTest(ctx context.Context, connString string) *Store {
-
-	c, err := pgx.Connect(context.Background(), connString)
+var StoreTest = func() *Store {
+	c, err := pgx.Connect(context.Background(), `postgres://postgres:postgrespw@localhost:49153/testing`)
 	if err != nil {
 		panic(err)
 	}
 
 	user.Migration(c)
 
-	return New(ctx, c)
-}
+	return New(context.Background(), c)
+}()

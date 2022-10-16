@@ -10,8 +10,7 @@ import (
 )
 
 func dev() error {
-	store := store.StoreTest(context.Background(), `postgres://postgres:postgrespw@localhost:49153/testing`)
-	handler := service.New(context.Background(), store)
+	handler := service.New(context.Background(), store.StoreTest)
 
 	srv := http.Server{
 		Addr:    ":7878",
