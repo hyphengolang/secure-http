@@ -28,7 +28,9 @@ func dev() error {
 		panic(err)
 	}
 
-	// will panic if error
+	// will panic if error,
+	// but it be useful to check the tables exist
+	// and exit if any errors arise
 	user.Migration(c)
 
 	store := store.New(ctx, c)

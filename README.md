@@ -15,3 +15,15 @@ export $(grep -v '^#' .env | xargs -d '\n')
 ```
 
 - Quotes for [bash](https://unix.stackexchange.com/questions/443989/whats-the-right-way-to-quote-command-arg)
+
+- Generate [cert](https://go.dev/src/crypto/tls/generate_cert.go?m=text)
+
+```bash
+go run "$(go env GOROOT)/src/crypto/tls/generate_cert.go" host 127.0.0.1 --rsa-bits=2048 --ca 
+```
+
+- [link](https://groups.google.com/g/golang-nuts/c/i12QU_yMp5Y/m/9qJ6VRPaBQAJ)
+
+```bash
+go run `locate generate_cert.go` host 127.0.0.1 --rsa-bits=2048 --ca 
+```
