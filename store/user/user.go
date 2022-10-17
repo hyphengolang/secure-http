@@ -77,10 +77,10 @@ func (r Repo) Delete(ctx context.Context, key any) error {
 	}
 
 	var rule string
-	if typ, set := ctx.Value(RuleSoftDeletion).(DeleteTyp); !set {
+	if s, ok := ctx.Value(RuleSoftDeletion).(DeleteTyp); !ok {
 		rule = setRuleSoftDeletionOn
 	} else {
-		switch typ {
+		switch s {
 		case HardDelete:
 			rule = setRuleSoftDeletionOff
 		default:
