@@ -16,15 +16,7 @@ import (
 var r internal.UserRepo
 
 func init() {
-	_ = os.Setenv("POSTGRES_HOSTNAME", "localhost")
-	_ = os.Setenv("DB_PORT", "49153")
-	_ = os.Setenv("POSTGRES_USER", "postgres")
-	_ = os.Setenv("POSTGRES_PASSWORD", "postgrespw")
-	_ = os.Setenv("POSTGRES_DB", "testing")
-	_ = os.Setenv("SSL_MODE", "disable")
-
 	connString := os.ExpandEnv("host=${POSTGRES_HOSTNAME} port=${DB_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=${SSL_MODE}")
-
 	c, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
 		panic(err)

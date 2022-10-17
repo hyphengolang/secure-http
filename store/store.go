@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 	"secure.adoublef.com/internal"
@@ -22,7 +23,9 @@ func New(ctx context.Context, c *pgx.Conn) *Store {
 
 var StoreTest = func() *Store {
 	ctx := context.Background()
-	c, err := pgx.Connect(ctx, `postgres://postgres:postgrespw@localhost:49153/testing`)
+
+	connString := os.ExpandEnv("host=${POSTGRES_HOSTNAME} port=${DB_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=${SSL_MODE}")
+	c, err := pgx.Connect(ctx, connString)
 	if err != nil {
 		panic(err)
 	}
