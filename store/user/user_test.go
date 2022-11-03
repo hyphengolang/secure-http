@@ -32,7 +32,7 @@ func TestRepo(t *testing.T) {
 
 	t.Cleanup(func() { testRepo.p.Close() })
 
-	t.Run(`select many from "account"`, func(t *testing.T) {
+	t.Run(`select many from "user"`, func(t *testing.T) {
 		as, err := testRepo.SelectMany(ctx)
 		is.NoErr(err)        // cannot query from database
 		is.Equal(len(as), 0) // no users in database
@@ -41,7 +41,7 @@ func TestRepo(t *testing.T) {
 	fizzId := suid.NewUUID()
 	buzzEmail := email.Email("buzz@mail.com")
 	burpUsername := "i_am_burp"
-	t.Run(`insert one into "account"`, func(t *testing.T) {
+	t.Run(`insert one into "user"`, func(t *testing.T) {
 		fizz := internal.User{
 			ID:       fizzId,
 			Username: "i_am_fizz",

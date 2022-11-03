@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	psql "github.com/hyphengolang/prelude/sql/postgres"
@@ -25,19 +24,35 @@ type User struct {
 }
 
 const (
-	qrySelectMany = `select id, username, email, password from "account"`
+	migration = `
+	begin;
+	
+	create extension if not exists "uuid-ossp";
+	create extension if not exists "citext";
+	
+	create temp table if not exists "user" (
+		id uuid primary key default uuid_generate_v4(),
+		username text unique not null check (username <> ''),
+		email citext unique not null check (email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'),
+		password citext not null check (password <> ''),
+		created_at timestamp not null default now()
+	);
+	
+	commit;
+	`
+	qrySelectMany = `select id, username, email, password from "user"`
 
-	qrySelectByID       = `select id, username, email, password from "account" where id = $1`
-	qrySelectByEmail    = `select id, username, email, password from "account" where email = $1`
-	qrySelectByUsername = `select id, username, email, password from "account" where username = $1`
+	qrySelectByID       = `select id, username, email, password from "user" where id = $1`
+	qrySelectByEmail    = `select id, username, email, password from "user" where email = $1`
+	qrySelectByUsername = `select id, username, email, password from "user" where username = $1`
 
-	qryInsert = `insert into "account" (id, username, email, password) values (@id, @username, @email, @password)`
+	qryInsert = `insert into "user" (id, username, email, password) values (@id, @username, @email, @password)`
 
-	qryDeleteByID    = `delete from "account" where id = $1;`
-	qryDeleteByEmail = `delete from "account" where email = $1;`
+	qryDeleteByID    = `delete from "user" where id = $1;`
+	qryDeleteByEmail = `delete from "user" where email = $1;`
 )
 
-func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
+func (r *Repo) Select(ctx context.Context, key any) (*internal.User, error) {
 	var qry string
 	switch key.(type) {
 	case suid.UUID:
@@ -50,19 +65,14 @@ func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
 		return nil, ErrInvalidType
 	}
 	var u internal.User
-	err := psql.QueryRow(r.p, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
-	if err != nil {
-		return nil, err
-	}
-	log.Println(u)
-	return &u, nil
+	return &u, psql.QueryRowContext(ctx, r.p, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
 }
 
-func (r Repo) SelectMany(ctx context.Context) ([]internal.User, error) {
-	return psql.Query(r.p, qrySelectMany, func(r pgx.Rows, u *internal.User) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) })
+func (r *Repo) SelectMany(ctx context.Context) ([]internal.User, error) {
+	return psql.QueryContext(ctx, r.p, qrySelectMany, func(r pgx.Rows, u *internal.User) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) })
 }
 
-func (r Repo) Insert(ctx context.Context, u *internal.User) error {
+func (r *Repo) Insert(ctx context.Context, u *internal.User) error {
 	args := pgx.NamedArgs{
 		"id":       u.ID,
 		"username": u.Username,
@@ -70,13 +80,33 @@ func (r Repo) Insert(ctx context.Context, u *internal.User) error {
 		"password": u.Password,
 	}
 
-	return psql.Exec(r.p, qryInsert, args)
+	return psql.ExecContext(ctx, r.p, qryInsert, args)
 }
 
-func (r Repo) Delete(ctx context.Context, key any) error {
-	tx, err := r.p.Begin(ctx)
+func (r *Repo) Delete(ctx context.Context, key any) error {
+	// return deleteNotWorking(ctx, r.p, key)
+	return deleteWorking(ctx, r.p, key)
+}
+
+func deleteWorking(ctx context.Context, p *pgxpool.Pool, key any) error {
+	var qry string
+	switch key.(type) {
+	case suid.UUID:
+		qry = qryDeleteByID
+	case email.Email:
+		qry = qryDeleteByEmail
+	default:
+		return ErrInvalidType
+	}
+
+	return psql.ExecContext(ctx, p, qry, key)
+}
+
+// TimeOut Error
+func deleteNotWorking(ctx context.Context, p *pgxpool.Pool, key any) error {
+	tx, err := p.Begin(ctx)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	var qry string
@@ -89,11 +119,15 @@ func (r Repo) Delete(ctx context.Context, key any) error {
 		return ErrInvalidType
 	}
 
-	if err = psql.Exec(tx, qry, key); err != nil {
-		return err
+	if _, err := tx.Exec(ctx, qry, key); err != nil {
+		panic(err)
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		panic(err)
+	}
+
+	return nil
 }
 
 type Repo struct {
@@ -102,7 +136,7 @@ type Repo struct {
 	p *pgxpool.Pool
 }
 
-func (r Repo) Context() context.Context {
+func (r *Repo) Context() context.Context {
 	if r.ctx != nil {
 		return r.ctx
 	}
@@ -140,22 +174,3 @@ func Migration(p *pgxpool.Pool) {
 		panic(err)
 	}
 }
-
-const migration = `
-begin;
-
-create extension if not exists "uuid-ossp";
-create extension if not exists "citext";
-
-create temp table if not exists "account" (
-	id uuid primary key default uuid_generate_v4(),
-	username text unique not null check (username <> ''),
-	email citext unique not null check (email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'),
-	password citext not null check (password <> ''),
-	created_at timestamp not null default now()
-);
-
-commit;
-`
-
-// update should change when
