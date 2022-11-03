@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"secure.adoublef.com/service"
 	"secure.adoublef.com/store"
 	"secure.adoublef.com/store/user"
@@ -23,7 +23,7 @@ func dev() error {
 	// setup store
 	ctx := context.Background()
 
-	c, err := pgx.Connect(ctx, connString)
+	p, err := pgxpool.New(ctx, connString)
 	if err != nil {
 		panic(err)
 	}
@@ -31,9 +31,9 @@ func dev() error {
 	// will panic if error,
 	// but it be useful to check the tables exist
 	// and exit if any errors arise
-	user.Migration(c)
+	user.Migration(p)
 
-	store := store.New(ctx, c)
+	store := store.New(ctx, p)
 
 	// connect to server
 	handler := service.New(context.Background(), store)
