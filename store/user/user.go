@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	psql "github.com/hyphengolang/prelude/sql/postgres"
@@ -10,6 +11,7 @@ import (
 	"github.com/hyphengolang/prelude/types/password"
 	"github.com/hyphengolang/prelude/types/suid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"secure.adoublef.com/internal"
 )
 
@@ -19,7 +21,6 @@ type User struct {
 	Email     email.Email
 	Password  password.PasswordHash
 	CreatedAt time.Time
-	IsDeleted bool
 	DeletedAt *time.Time
 }
 
@@ -34,9 +35,6 @@ const (
 
 	qryDeleteByID    = `delete from "account" where id = $1;`
 	qryDeleteByEmail = `delete from "account" where email = $1;`
-
-	setRuleSoftDeletionOn  = `set rules.soft_deletion to 'on'`
-	setRuleSoftDeletionOff = `set rules.soft_deletion to 'off'`
 )
 
 func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
@@ -52,11 +50,16 @@ func (r Repo) Select(ctx context.Context, key any) (*internal.User, error) {
 		return nil, ErrInvalidType
 	}
 	var u internal.User
-	return &u, psql.QueryRow(r.q, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
+	err := psql.QueryRow(r.p, qry, func(r pgx.Row) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) }, key)
+	if err != nil {
+		return nil, err
+	}
+	log.Println(u)
+	return &u, nil
 }
 
 func (r Repo) SelectMany(ctx context.Context) ([]internal.User, error) {
-	return psql.Query(r.q, qrySelectMany, func(r pgx.Rows, u *internal.User) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) })
+	return psql.Query(r.p, qrySelectMany, func(r pgx.Rows, u *internal.User) error { return r.Scan(&u.ID, &u.Username, &u.Email, &u.Password) })
 }
 
 func (r Repo) Insert(ctx context.Context, u *internal.User) error {
@@ -67,28 +70,12 @@ func (r Repo) Insert(ctx context.Context, u *internal.User) error {
 		"password": u.Password,
 	}
 
-	return psql.Exec(r.q, qryInsert, args)
+	return psql.Exec(r.p, qryInsert, args)
 }
 
 func (r Repo) Delete(ctx context.Context, key any) error {
-	tx, err := r.q.Begin(ctx)
+	tx, err := r.p.Begin(ctx)
 	if err != nil {
-		return err
-	}
-
-	var rule string
-	if s, ok := ctx.Value(RuleSoftDeletion).(DeleteTyp); !ok {
-		rule = setRuleSoftDeletionOn
-	} else {
-		switch s {
-		case HardDelete:
-			rule = setRuleSoftDeletionOff
-		default:
-			rule = setRuleSoftDeletionOn
-		}
-	}
-
-	if err = psql.Exec(tx, rule); err != nil {
 		return err
 	}
 
@@ -112,7 +99,7 @@ func (r Repo) Delete(ctx context.Context, key any) error {
 type Repo struct {
 	ctx context.Context
 
-	q *pgx.Conn
+	p *pgxpool.Pool
 }
 
 func (r Repo) Context() context.Context {
@@ -122,53 +109,34 @@ func (r Repo) Context() context.Context {
 	return context.Background()
 }
 
-func (r *Repo) Close(ctx context.Context) error { return r.q.Close(ctx) }
+func (r *Repo) Close() { r.p.Close() }
 
-func NewRepo(ctx context.Context, q *pgx.Conn) internal.UserRepo {
+func NewRepo(ctx context.Context, q *pgxpool.Pool) *Repo {
 	r := &Repo{ctx, q}
 	return r
 }
 
 var ErrInvalidType = errors.New(`invalid type`)
 
-// More info regarding soft deleting https://evilmartians.com/chronicles/soft-deletion-with-postgresql-but-with-logic-on-the-database
-type DeleteTyp int
-
-func (t DeleteTyp) String() string {
-	return [...]string{
-		"soft_delete",
-		"hard_delete",
-	}[t]
-}
-
-const (
-	SoftDelete DeleteTyp = iota
-	HardDelete
-)
-
-type contextKey string
-
-const (
-	RuleSoftDeletion = contextKey("rule-soft-deletion")
-)
-
 var RepoTest = func() internal.UserRepo {
 	ctx := context.Background()
-	c, err := pgx.Connect(ctx, `postgres://postgres:postgrespw@localhost:49153/testing`)
+
+	connString := `postgres://postgres:postgrespw@localhost:49153/testing`
+	p, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
 		panic(err)
 	}
 
-	Migration(c)
+	Migration(p)
 
-	return NewRepo(ctx, c)
+	return NewRepo(ctx, p)
 }()
 
 // For development only
 //
 // If there is an error, it will panic immediately
-func Migration(c *pgx.Conn) {
-	if _, err := c.Exec(context.Background(), migration); err != nil {
+func Migration(p *pgxpool.Pool) {
+	if _, err := p.Exec(context.Background(), migration); err != nil {
 		panic(err)
 	}
 }
@@ -184,16 +152,10 @@ create temp table if not exists "account" (
 	username text unique not null check (username <> ''),
 	email citext unique not null check (email ~ '^[a-zA-Z0-9.!#$%&''*+/=?^_{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'),
 	password citext not null check (password <> ''),
-	created_at timestamp not null default now(),
-	deleted boolean not null default false
+	created_at timestamp not null default now()
 );
-
-create or replace rule "_soft_deletion" 
-	as on delete to "account" 
-	where current_setting('rules.soft_deletion') = 'on'
-	do instead update "account" set deleted = true where id = old.id;
-
-set rules.soft_deletion to 'on';
 
 commit;
 `
+
+// update should change when

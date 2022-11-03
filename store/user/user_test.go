@@ -8,32 +8,32 @@ import (
 	"github.com/hyphengolang/prelude/types/email"
 	"github.com/hyphengolang/prelude/types/password"
 	"github.com/hyphengolang/prelude/types/suid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"secure.adoublef.com/internal"
 )
 
-var r internal.UserRepo
+var testRepo *Repo
 
 func init() {
 	connString := `postgres://postgres:postgrespw@localhost:49153/testing`
-	c, err := pgx.Connect(context.Background(), connString)
+	p, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
 		panic(err)
 	}
 
-	Migration(c)
+	Migration(p)
 
-	r = NewRepo(context.Background(), c)
+	testRepo = NewRepo(context.Background(), p)
 }
 
 func TestRepo(t *testing.T) {
 	t.Parallel()
 	is, ctx := is.New(t), context.TODO()
 
-	t.Cleanup(func() { r.Close(ctx) })
+	t.Cleanup(func() { testRepo.p.Close() })
 
 	t.Run(`select many from "account"`, func(t *testing.T) {
-		as, err := r.SelectMany(ctx)
+		as, err := testRepo.SelectMany(ctx)
 		is.NoErr(err)        // cannot query from database
 		is.Equal(len(as), 0) // no users in database
 	})
@@ -49,7 +49,7 @@ func TestRepo(t *testing.T) {
 			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
-		err := r.Insert(ctx, &fizz)
+		err := testRepo.Insert(ctx, &fizz)
 		is.NoErr(err) // inserting "fizz"
 
 		buzz := internal.User{
@@ -59,7 +59,7 @@ func TestRepo(t *testing.T) {
 			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
-		err = r.Insert(ctx, &buzz)
+		err = testRepo.Insert(ctx, &buzz)
 		is.NoErr(err) // inserting "buzz"
 
 		burp := internal.User{
@@ -69,10 +69,10 @@ func TestRepo(t *testing.T) {
 			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
-		err = r.Insert(ctx, &burp)
+		err = testRepo.Insert(ctx, &burp)
 		is.NoErr(err) // inserting "buzz"
 
-		us, err := r.SelectMany(ctx)
+		us, err := testRepo.SelectMany(ctx)
 		is.NoErr(err)        // cannot query from database
 		is.Equal(len(us), 3) // 2 users in database
 	})
@@ -85,7 +85,7 @@ func TestRepo(t *testing.T) {
 			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
-		err := r.Insert(context.Background(), &u)
+		err := testRepo.Insert(context.Background(), &u)
 		is.True(err != nil) // "fizz" already exists
 
 		u = internal.User{
@@ -95,39 +95,31 @@ func TestRepo(t *testing.T) {
 			Password: password.Password("p4$$w4rD").MustHash(),
 		}
 
-		err = r.Insert(context.Background(), &u)
+		err = testRepo.Insert(context.Background(), &u)
 		is.True(err != nil) // invalid email
 
-		us, err := r.SelectMany(ctx)
+		us, err := testRepo.SelectMany(ctx)
 		is.NoErr(err)        // cannot query from database
 		is.Equal(len(us), 3) // 3 users in database
 	})
 
-	t.Run(`delete one from "account"`, func(t *testing.T) {
-		err := r.Delete(ctx, fizzId)
-		is.NoErr(err) // perform soft delete on "i_am_fizz"
-
-		us, _ := r.SelectMany(ctx)
-		is.Equal(len(us), 3) // 3 users in database after soft delete
-
-		ctx = context.WithValue(ctx, RuleSoftDeletion, HardDelete)
-		err = r.Delete(ctx, buzzEmail)
-		is.NoErr(err) // perform hard delete on "i_am_buzz"
-
-		us, _ = r.SelectMany(ctx)
-		is.Equal(len(us), 2) // 2 users in database
-
-		err = r.Delete(ctx, nil)
-		is.True(err != nil) // invalid key
-	})
-
 	t.Run(`select one from "account"`, func(t *testing.T) {
-		u, err := r.Select(ctx, fizzId)
-		is.NoErr(err)                            // select "i_am_fizz"
-		is.Equal(u.ID.String(), fizzId.String()) // "id" values are the same
+		_, err := testRepo.Select(ctx, fizzId)
+		is.NoErr(err) // account "i_am_fizz" does not exist
 
-		u, err = r.Select(ctx, burpUsername)
+		u, err := testRepo.Select(ctx, burpUsername)
 		is.NoErr(err)                      // select "i_am_burp"
 		is.Equal(u.Username, burpUsername) // "username" values are the same
+	})
+
+	t.Run(`delete one from "account"`, func(t *testing.T) {
+		err := testRepo.Delete(ctx, fizzId)
+		is.NoErr(err) // delete account "i_am_fizz"
+
+		us, _ := testRepo.SelectMany(ctx)
+		is.Equal(len(us), 2) // 2 users in database
+
+		err = testRepo.Delete(ctx, nil)
+		is.True(err != nil) // invalid key
 	})
 }
