@@ -32,7 +32,6 @@ type UserRepo interface {
 
 type RUserRepo interface {
 	Context() context.Context
-	Close(ctx context.Context) error
 	SelectMany(ctx context.Context) ([]User, error)
 	// Method takes a context and a key value. If key is not of type
 	// `internal.Email` or `suid.SUID` or `string` an invalid type error will be returned.
@@ -40,7 +39,6 @@ type RUserRepo interface {
 }
 type WUserRepo interface {
 	Context() context.Context
-	Close(ctx context.Context) error
 	Insert(ctx context.Context, u *User) error
 	// Method takes a context and a key value. If key is not of type
 	// `internal.Email` or `suid.SUID` an invalid type error will be returned.
