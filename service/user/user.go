@@ -20,23 +20,23 @@ import (
 /*
 Register to service
 
-	[?] POST /api/v1/account/
+	[?] POST /api/v1/user/
 
 Get list of accounts
 
-	[?] GET /api/v1/account/
+	[?] GET /api/v1/user/
 
 Get current user info
 
-	[ ] GET /api/v1/account/me
+	[ ] GET /api/v1/user/me
 
 Delete my account
 
-	[ ] DELETE /api/v1/account/me
+	[ ] DELETE /api/v1/user/me
 
 Get a user's info by uuid
 
-	[ ] GET /api/v1/account/{uuid}
+	[ ] GET /api/v1/user/{uuid}
 
 Sign in with credentials
 
@@ -53,23 +53,59 @@ Refresh token
 func (s Service) routes() {
 	private, public := auth.RS256()
 
-	s.m.Route("/api/v1/account", func(r chi.Router) {
-		r.Post("/", s.handleCreateAccount())
+	s.m.Route("/api/v1/user", func(r chi.Router) {
+		r.Post("/", s.handleRegisterUser())
 
-		// authorization required
-		r.Get("/", s.handleGetAccountList())
-		r.Get("/{uuid}", s.handleGetAccount())
-		r.Get("/me", s.handleGetMyAccount(public))
-		r.Delete("/me", s.handleSignOut())
+		r.Get("/", s.handleListRegisteredUsers())
+		r.Get("/{uuid}", s.handleSearchUser())
+		r.Get("/me", s.handleGetMyDetails(public))
+
+		r.Delete("/me", s.handleDeregisterUser(public))
 	})
 
 	s.m.Route("/api/v1/auth", func(r chi.Router) {
 		r.Post("/", s.handleSignIn(private))
-
-		// authorization required
-		// r.Delete("/", http.NotFound)
+		r.Delete("/", s.handleSignOut())
 		r.Get("/", s.handleRefreshToken(private, public))
 	})
+}
+
+func (s Service) handleDeregisterUser(public jwk.Key) http.HandlerFunc {
+	// auth required
+	return func(w http.ResponseWriter, r *http.Request) {
+		tk, err := auth.ParseRequest(r, public)
+		if err != nil {
+			s.respond(w, r, err, http.StatusUnauthorized)
+			return
+		}
+
+		e, ok := tk.PrivateClaims()["email"].(string)
+		if !ok {
+			s.respondText(w, r, http.StatusInternalServerError)
+			return
+		}
+
+		me, err := s.r.Select(r.Context(), email.Email(e))
+		if err != nil {
+			s.respond(w, r, err, http.StatusNotFound)
+			return
+		}
+
+		if err := s.r.Delete(r.Context(), me.ID); err != nil {
+			s.respond(w, r, err, http.StatusInternalServerError)
+			return
+		}
+
+		c := &http.Cookie{
+			Path:     "/",
+			Name:     cookieName,
+			HttpOnly: true,
+			MaxAge:   -1,
+		}
+
+		s.setCookie(w, c)
+		s.respond(w, r, nil, http.StatusNoContent)
+	}
 }
 
 func (s Service) handleSignOut() http.HandlerFunc {
@@ -82,7 +118,7 @@ func (s Service) handleSignOut() http.HandlerFunc {
 		}
 
 		s.setCookie(w, c)
-		s.respondText(w, r, http.StatusOK)
+		s.respondText(w, r, http.StatusNoContent)
 	}
 }
 
@@ -91,8 +127,8 @@ func (s Service) handleRefreshToken(private, public jwk.Key) http.HandlerFunc {
 		AccessToken string `json:"accessToken"`
 	}
 
+	// auth required
 	return func(w http.ResponseWriter, r *http.Request) {
-		// auth middleware
 		jtk, err := auth.ParseCookie(r, public, cookieName)
 		if err != nil {
 			s.respond(w, r, err, http.StatusUnauthorized)
@@ -104,7 +140,7 @@ func (s Service) handleRefreshToken(private, public jwk.Key) http.HandlerFunc {
 			s.respondText(w, r, http.StatusInternalServerError)
 			return
 		}
-		// auth middleware
+
 		u, err := s.r.Select(r.Context(), email.Email(e))
 		if err != nil {
 			s.respond(w, r, err, http.StatusForbidden)
@@ -132,19 +168,19 @@ func (s Service) handleSignIn(private jwk.Key) http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var d User
-		if err := s.decode(w, r, &d); err != nil {
+		var dto User
+		if err := s.decode(w, r, &dto); err != nil {
 			s.respond(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		u, err := s.r.Select(r.Context(), d.Email)
+		u, err := s.r.Select(r.Context(), dto.Email)
 		if err != nil {
 			s.respond(w, r, err, http.StatusNotFound)
 			return
 		}
 
-		if err := u.Password.Compare(d.Password.String()); err != nil {
+		if err := u.Password.Compare(dto.Password.String()); err != nil {
 			s.respond(w, r, err, http.StatusForbidden)
 			return
 		}
@@ -176,7 +212,7 @@ func (s Service) handleSignIn(private jwk.Key) http.HandlerFunc {
 	}
 }
 
-func (s Service) handleGetAccount() http.HandlerFunc {
+func (s Service) handleSearchUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid, err := s.parseUUID(w, r)
 		if err != nil {
@@ -194,9 +230,9 @@ func (s Service) handleGetAccount() http.HandlerFunc {
 	}
 }
 
-func (s Service) handleGetMyAccount(public jwk.Key) http.HandlerFunc {
+func (s Service) handleGetMyDetails(public jwk.Key) http.HandlerFunc {
+	// auth required
 	return func(w http.ResponseWriter, r *http.Request) {
-		// auth middleware
 		tk, err := auth.ParseRequest(r, public)
 		if err != nil {
 			s.respond(w, r, err, http.StatusUnauthorized)
@@ -208,7 +244,6 @@ func (s Service) handleGetMyAccount(public jwk.Key) http.HandlerFunc {
 			s.respondText(w, r, http.StatusInternalServerError)
 			return
 		}
-		// auth middleware
 
 		me, err := s.r.Select(r.Context(), email.Email(e))
 		if err != nil {
@@ -220,7 +255,7 @@ func (s Service) handleGetMyAccount(public jwk.Key) http.HandlerFunc {
 	}
 }
 
-func (s Service) handleGetAccountList() http.HandlerFunc {
+func (s Service) handleListRegisteredUsers() http.HandlerFunc {
 	type payload struct {
 		Length int             `json:"length"`
 		Data   []internal.User `json:"data"`
@@ -242,7 +277,7 @@ func (s Service) handleGetAccountList() http.HandlerFunc {
 	}
 }
 
-func (s Service) handleCreateAccount() http.HandlerFunc {
+func (s Service) handleRegisterUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, err := s.newUser(w, r)
 		if err != nil {
@@ -258,6 +293,8 @@ func (s Service) handleCreateAccount() http.HandlerFunc {
 		s.created(w, r, u.ID.ShortUUID().String())
 	}
 }
+
+// Service Utils
 
 func (s Service) signedTokens(private jwk.Key, u *internal.User) (its, ats, rts []byte, err error) {
 	o := auth.SignOption{

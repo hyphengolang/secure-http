@@ -44,7 +44,7 @@ func TestService(t *testing.T) {
 			"password":"p4$$w4rD"
 		}`
 
-		res, _ := srv.Client().Post(srv.URL+"/api/v1/account/", applicationJson, strings.NewReader(payload))
+		res, _ := srv.Client().Post(srv.URL+"/api/v1/user/", applicationJson, strings.NewReader(payload))
 		is.Equal(res.StatusCode, http.StatusCreated) // register "i_am_fizz"
 		fizzUrl, _ = res.Location()
 
@@ -55,7 +55,7 @@ func TestService(t *testing.T) {
 			"password":"p4$$w4rD"
 		}`
 
-		res, _ = srv.Client().Post(srv.URL+"/api/v1/account/", applicationJson, strings.NewReader(payload))
+		res, _ = srv.Client().Post(srv.URL+"/api/v1/user/", applicationJson, strings.NewReader(payload))
 		is.Equal(res.StatusCode, http.StatusCreated) // register "i_am_buzz"
 
 		payload = `
@@ -65,10 +65,10 @@ func TestService(t *testing.T) {
 			"password":"p4$$w4rD"
 		}`
 
-		res, _ = srv.Client().Post(srv.URL+"/api/v1/account/", applicationJson, strings.NewReader(payload))
+		res, _ = srv.Client().Post(srv.URL+"/api/v1/user/", applicationJson, strings.NewReader(payload))
 		is.Equal(res.StatusCode, http.StatusBadRequest) // registration failed
 
-		res, _ = srv.Client().Get(srv.URL + "/api/v1/account/")
+		res, _ = srv.Client().Get(srv.URL + "/api/v1/user/")
 		is.Equal(res.StatusCode, http.StatusOK) // list some accounts
 
 		type body struct {
@@ -83,7 +83,7 @@ func TestService(t *testing.T) {
 
 	t.Run("get a user by a key", func(t *testing.T) {
 		sid := lastSplitValue(fizzUrl.String(), "/")
-		res, _ := srv.Client().Get(srv.URL + "/api/v1/account/" + sid)
+		res, _ := srv.Client().Get(srv.URL + "/api/v1/user/" + sid)
 		is.Equal(res.StatusCode, http.StatusOK) // get a user by suid
 	})
 
@@ -92,7 +92,7 @@ func TestService(t *testing.T) {
 		AccessToken string `json:"accessToken"`
 	}
 
-	var fizzTk token
+	var fizzTokens token
 	fizzCookie := &http.Cookie{}
 	t.Run(`sign-in with an account`, func(t *testing.T) {
 		payload := `
@@ -122,7 +122,7 @@ func TestService(t *testing.T) {
 		res, _ = srv.Client().Post(srv.URL+"/api/v1/auth/", applicationJson, strings.NewReader(payload))
 		is.Equal(res.StatusCode, http.StatusOK) // successful sign-in
 
-		err := json.NewDecoder(res.Body).Decode(&fizzTk)
+		err := json.NewDecoder(res.Body).Decode(&fizzTokens)
 		res.Body.Close()
 		is.NoErr(err) // parsing json with tokens
 
@@ -135,8 +135,8 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run(`access authorized endpoints`, func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/account/me", nil)
-		req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, fizzTk.AccessToken))
+		req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/user/me", nil)
+		req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, fizzTokens.AccessToken))
 		res, _ := srv.Client().Do(req)
 		is.Equal(res.StatusCode, http.StatusOK) // authorized endpoint
 	})
@@ -149,8 +149,30 @@ func TestService(t *testing.T) {
 		is.Equal(res.StatusCode, http.StatusOK) // refresh token
 	})
 
-	t.Run(`delete account requires auth`, func(t *testing.T) {
+	t.Run(`sign-out user`, func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/auth/", nil)
+		res, _ := srv.Client().Do(req)
+		is.Equal(res.StatusCode, http.StatusNoContent) // sign-out user
+	})
 
+	t.Run(`delete account requires auth`, func(t *testing.T) {
+		payload := `
+		{
+			"email":"fizz@mail.com",
+			"password":"p4$$w4rD"
+		}`
+
+		res, _ := srv.Client().Post(srv.URL+"/api/v1/auth/", applicationJson, strings.NewReader(payload))
+		is.Equal(res.StatusCode, http.StatusOK) // successful sign-in
+
+		req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/user/me", nil)
+		res, _ = srv.Client().Do(req)
+		is.Equal(res.StatusCode, http.StatusUnauthorized) // deregister invalid
+
+		req, _ = http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/user/me", nil)
+		req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, fizzTokens.AccessToken))
+		res, _ = srv.Client().Do(req)
+		is.Equal(res.StatusCode, http.StatusNoContent) // deregister valid
 	})
 }
 
