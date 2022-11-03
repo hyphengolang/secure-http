@@ -93,7 +93,7 @@ func TestService(t *testing.T) {
 	}
 
 	var fizzTk token
-	fizzC := &http.Cookie{}
+	fizzCookie := &http.Cookie{}
 	t.Run(`sign-in with an account`, func(t *testing.T) {
 		payload := `
 		{
@@ -129,7 +129,7 @@ func TestService(t *testing.T) {
 		for _, k := range res.Cookies() {
 			t.Log(k.Value)
 			if k.Name == cookieName {
-				fizzC = k
+				fizzCookie = k
 			}
 		}
 	})
@@ -143,10 +143,14 @@ func TestService(t *testing.T) {
 
 	t.Run(`refresh token for "i_am_fizz"`, func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/auth/", nil)
-		req.AddCookie(fizzC)
+		req.AddCookie(fizzCookie)
 
 		res, _ := srv.Client().Do(req)
 		is.Equal(res.StatusCode, http.StatusOK) // refresh token
+	})
+
+	t.Run(`delete account requires auth`, func(t *testing.T) {
+
 	})
 }
 

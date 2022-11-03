@@ -244,13 +244,13 @@ func (s Service) handleGetAccountList() http.HandlerFunc {
 
 func (s Service) handleCreateAccount() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var u internal.User
-		if err := s.newUser(w, r, &u); err != nil {
+		u, err := s.newUser(w, r)
+		if err != nil {
 			s.respond(w, r, err, http.StatusBadRequest)
 			return
 		}
 
-		if err := s.r.Insert(r.Context(), &u); err != nil {
+		if err := s.r.Insert(r.Context(), u); err != nil {
 			s.respond(w, r, err, http.StatusInternalServerError)
 			return
 		}
@@ -296,25 +296,25 @@ func (s Service) parseUUID(w http.ResponseWriter, r *http.Request) (suid.UUID, e
 	return suid.ParseString(chi.URLParam(r, "uuid"))
 }
 
-func (s Service) newUser(w http.ResponseWriter, r *http.Request, u *internal.User) error {
-	var d User
-	if err := s.decode(w, r, &d); err != nil {
-		return err
+func (s Service) newUser(w http.ResponseWriter, r *http.Request) (*internal.User, error) {
+	var dto User
+	if err := s.decode(w, r, &dto); err != nil {
+		return nil, err
 	}
 
-	h, err := d.Password.Hash()
+	h, err := dto.Password.Hash()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	*u = internal.User{
+	u := &internal.User{
 		ID:       suid.NewUUID(),
-		Username: d.Username,
-		Email:    d.Email,
+		Username: dto.Username,
+		Email:    dto.Email,
 		Password: h,
 	}
 
-	return nil
+	return u, nil
 }
 
 type User struct {
