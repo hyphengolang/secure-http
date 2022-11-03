@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/hyphengolang/prelude/testing/is"
@@ -16,7 +15,7 @@ import (
 var r internal.UserRepo
 
 func init() {
-	connString := os.ExpandEnv("host=${POSTGRES_HOSTNAME} port=${DB_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=${SSL_MODE}")
+	connString := `postgres://postgres:postgrespw@localhost:49153/testing`
 	c, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
 		panic(err)

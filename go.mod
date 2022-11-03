@@ -3,7 +3,7 @@ module secure.adoublef.com
 go 1.19
 
 require (
-	github.com/hyphengolang/prelude v0.1.0
+	github.com/hyphengolang/prelude v0.1.1
 	github.com/jackc/pgx/v5 v5.0.3
 )
 

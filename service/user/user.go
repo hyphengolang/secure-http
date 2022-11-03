@@ -67,7 +67,7 @@ func (s Service) routes() {
 		r.Post("/", s.handleSignIn(private))
 
 		// authorization required
-		r.Delete("/", http.NotFound)
+		// r.Delete("/", http.NotFound)
 		r.Get("/", s.handleRefreshToken(private, public))
 	})
 }

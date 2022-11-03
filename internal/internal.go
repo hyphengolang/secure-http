@@ -10,10 +10,18 @@ import (
 
 type ContextKey string
 
+type UserTyp string
+
+const (
+	GuestUser      UserTyp = "guest"
+	RegisteredUser UserTyp = "registered"
+	AdminUser      UserTyp = "admin"
+)
+
 type User struct {
 	ID       suid.UUID             `json:"id"`
 	Username string                `json:"username"`
-	Email    email.Email           `json:"email"`
+	Email    email.Email           `json:"email,omitempty"`
 	Password password.PasswordHash `json:"-"`
 }
 
